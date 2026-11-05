@@ -52,10 +52,15 @@ To update the game later, upload the new `index.html` over the old one.
 
 ## Missions
 
-There are 36 missions.
+There are 44 missions.
 
 - **1–12:** open city maps.
 - **13–24:** in and around the buildings (office, warehouse, 5-level shopping centre, car park, sports hall).
+- **37–44: new maps.**
+  - **Snow:** Frozen Outpost, Avalanche Rescue. Falling snow, snowy pines and cabins.
+  - **Forest:** Into the Woods, Forest Ambush. Thick trees, fallen logs for cover.
+  - **Mountain:** Mountain Pass, Eagle's Nest. Boulders you can jump onto for high ground.
+  - **Space:** Moon Base Alpha, Robot Mothership. Low gravity, so you jump much higher and grenades fly further.
 - **25–36: inside one building.** These include:
   - **Floor by floor** missions (Office Lockdown, Car Park Climb, Mall Sweep, Tower Siege, Mega Mall Finale): clear every level, bottom to top, then reach the green extraction zone on the top level. The objective tells you which level still has robots.
   - **Indoor sweeps** (Warehouse Sweep): every robot is hiding inside.
@@ -68,7 +73,9 @@ There are 36 missions.
 2. Everyone else opens the same GitHub Pages link on their own PC or iPad and goes to **Multiplayer**:
    - **Private room:** type the code and press **Join**.
    - **Public room:** it appears under **🌐 Public games** within about 10 seconds. The list refreshes itself; **↻ Refresh** checks right away.
-3. The host picks the team size (**4 v 4** up to **20 v 20**), mode, map and bots, then presses **START**. Bots fill every empty spot.
+3. The host picks the team size (**4 v 4** up to **20 v 20**), mode, map (Daytime, Industrial, Desert, Night, Snow, Forest, Mountain or Space) and bots, then presses **START**. Bots fill every empty spot.
+
+**Bots** spread out across the map. Each takes its own lane (left, centre or right) and its own style (rusher, flanker, holder or roamer), and they keep their distance from each other. In Capture the Flag, attackers push for the flag and escort whoever is carrying it.
 
 **Big rooms:** everyone connects through the host's device. 20 v 20 with bots runs well anywhere. For lots of *real* players, the host should be a PC on good home internet; an iPad host may lag.
 
