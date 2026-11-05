@@ -42,6 +42,8 @@ To update the game later, upload the new `index.html` over the old one.
 
 ## Weapons and crew
 
+- **Customise:** tap 🎨 (or a weapon's picture) to open Inspect, then pick a **sight** (Iron, Red Dot, Holo, 3x ACOG, 6x Scope; each zooms differently when you aim and shows its own reticle), a **skin** (13 camos up to Gold and Diamond) and a **sticker** (emoji, or your own text up to 8 letters). Buy each once, then use it on any gun.
+- **Armory:** every weapon card shows its rarity (Common, Rare, Epic, Legendary), damage, rounds per minute, magazine, range and special tags. Tap a weapon's picture to **Inspect** it in a rotating 3D view.
 - **Main weapons (24):** submachine guns, assault rifles, shotguns, sniper and marksman rifles, machine guns (including the Buzzsaw Minigun), energy weapons (Arc Plasma, Photon Laser, Volt Shock Rifle that freezes robots, Railgun X) and launchers (Boomer Grenade Launcher, Thumper Rocket Launcher). New ones unlock as you rank up.
 - **Sidearms (8):** your second weapon can be any of 8 sidearms: P9 Pistol, Raptor .45, Whisper SD9 (suppressed), Hornet Machine Pistol, Bulldog .44 revolver, Shorty Sawn-off, Hand Cannon .50 and Ion Blaster. Buy them in the Armory and press **Equip as sidearm**. Switch weapons with Q, 1 or 2.
 - **Smoke bombs:** press V (or 💨) to throw one. The cloud lasts 14 seconds and robots can't see or shoot through it. Buy more in the Armory (carry up to 4).
@@ -50,17 +52,30 @@ To update the game later, upload the new `index.html` over the old one.
 
 ## Missions
 
-There are 24 missions. Missions 13–24 take place in and around the buildings: Mall Rescue, Warehouse Raid, Corner Office, Car Park Siege, Game Over (sports hall), Power Cut, Level Up, Underground, Stadium Rescue, Night Shift, Shopping Spree and Final Showdown. Robots guard the upper floors too, so clear each level as you go.
+There are 36 missions.
+
+- **1–12:** open city maps.
+- **13–24:** in and around the buildings (office, warehouse, 5-level shopping centre, car park, sports hall).
+- **25–36: inside one building.** These include:
+  - **Floor by floor** missions (Office Lockdown, Car Park Climb, Mall Sweep, Tower Siege, Mega Mall Finale): clear every level, bottom to top, then reach the green extraction zone on the top level. The objective tells you which level still has robots.
+  - **Indoor sweeps** (Warehouse Sweep): every robot is hiding inside.
+  - **Upper-floor bombs:** Food Court Bomb (defuse on level 3 of the mall) and Server Room (plant on the office's top floor).
+  - **Other indoor missions:** Penthouse (commanders on every floor), Court Defense (waves in the sports hall), Late Night Shopping (rescue in the mall) and Hall of Doom (a Titan boss on the court).
 
 ## Multiplayer
 
 1. One player opens **Multiplayer** and picks **🔒 Host private game** or **🌐 Host public game**, and gets a 5-letter room code.
 2. Everyone else opens the same GitHub Pages link on their own PC or iPad and goes to **Multiplayer**:
-   - **Private room:** type the code and press **Join**. Only people with the code can get in.
-   - **Public room:** it appears under **🌐 Public games**. Press **Join** next to it (press **↻ Refresh** to update the list).
-3. The host picks the mode (Team Deathmatch, Capture the Flag, Bomb Defuse or King of the Hill), the map and the bots, then presses **START**. The host can switch the room between Private and Public in the lobby at any time.
+   - **Private room:** type the code and press **Join**.
+   - **Public room:** it appears under **🌐 Public games** within about 10 seconds. The list refreshes itself; **↻ Refresh** checks right away.
+3. The host picks the team size (**4 v 4** up to **20 v 20**), mode, map and bots, then presses **START**. Bots fill every empty spot.
 
-Many rooms can run at the same time, each with up to 8 players. Up to 20 public rooms show in the list at once; private rooms have no limit.
+**Big rooms:** everyone connects through the host's device. 20 v 20 with bots runs well anywhere. For lots of *real* players, the host should be a PC on good home internet; an iPad host may lag.
+
+**If a public game doesn't show up:**
+- Everyone needs the same game version. It's shown next to the SPECIAL FORCE title (for example v13). After you update GitHub, reload the page on every device (on iPad, pull down to refresh). Rooms from a different version show an "Update" button instead of "Join".
+- The host should keep the game on screen. If an iPad goes to sleep or switches apps, the room drops off the list until the game is opened again.
+- Online play only works from the GitHub Pages copy, not the claude.ai preview.
 
 Online play needs an internet connection. Players connect to each other directly, using the free PeerJS service to find each other. Some school or work networks block this, but home Wi-Fi is usually fine.
 
