@@ -74,11 +74,13 @@ There are 44 missions.
 2. Everyone else opens the same GitHub Pages link on their own PC or iPad and goes to **Multiplayer**:
    - **Private room:** type the code and press **Join**.
    - **Public room:** it appears under **🌐 Public games** within about 10 seconds. The list refreshes itself; **↻ Refresh** checks right away.
-3. The host picks the team size (**4 v 4** up to **20 v 20**), mode, map (Daytime, Industrial, Desert, Night, Snow, Forest, Mountain or Space) and bots, then presses **START**. Bots fill every empty spot.
+3. The host picks the team size (**4 v 4** up to **100 v 100**), mode, map (Daytime, Industrial, Desert, Night, Snow, Forest, Mountain or Space) and bots, then presses **START**. Bots fill every empty spot.
 
 **Bots** spread out across the map. Each takes its own lane (left, centre or right) and its own style (rusher, flanker, holder or roamer), and they keep their distance from each other. In Capture the Flag, attackers push for the flag and escort whoever is carrying it.
 
-**Big rooms:** everyone connects through the host's device. 20 v 20 with bots runs well anywhere. For lots of *real* players, the host should be a PC on good home internet; an iPad host may lag.
+**Big rooms:** team sizes go 4, 8, 12, 16, 20, 32, 50 and 100 per side. Bots fill every empty spot, and bigger teams automatically get bigger maps (up to Massive, 280 m). Far-away soldiers are drawn as simple team-coloured figures to keep things smooth. Up to 32 real players can join one room. Everyone connects through the host's device, so for many real players the host should be a PC on good home internet. 50 v 50 and 100 v 100 are best on a PC or a recent iPad with Graphics set to Low.
+
+**Team Deathmatch** is won by the first team to reach 3 × the team size in knockouts (24 for 8 v 8, 150 for 50 v 50, 300 for 100 v 100).
 
 **If a public game doesn't show up:**
 - Everyone needs the same game version. It's shown next to the SPECIAL FORCE title (for example v13). After you update GitHub, reload the page on every device (on iPad, pull down to refresh). Rooms from a different version show an "Update" button instead of "Join".
