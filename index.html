@@ -2426,7 +2426,7 @@ let MP=null;
 const TEAMS=['red','blue'],TCOL={red:0xff5a50,blue:0x58a6ff},TCSS={red:'#ff6a60',blue:'#58a6ff'},TNAME={red:'RED',blue:'BLUE'};
 const MPMODES={tdm:{name:'Team Deathmatch',icon:'⚔️',limit:25,unit:'knockouts',time:600},ctf:{name:'Capture the Flag',icon:'🚩',limit:3,unit:'captures',time:600},bomb:{name:'Bomb Defuse',icon:'💣',limit:4,unit:'rounds',time:0},koth:{name:'King of the Hill',icon:'👑',limit:100,unit:'points',time:600}};
 const BOTSKILL={easy:{acc:0.22,dmg:11,react:0.8,label:'Easy'},normal:{acc:0.34,dmg:14,react:0.5,label:'Normal'},hard:{acc:0.46,dmg:17,react:0.3,label:'Hard'}};
-const SF_VER='v16';
+const SF_VER='v18';
 const BOTNAMES=['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliet','Kilo','Lima','Mike','November','Oscar','Papa','Quebec','Romeo','Sierra','Tango'];
 const TEAMSIZES=[4,8,12,16,20,32,50,100];const MAX_HUMANS=32;
 function mpMaxPlayers(){return Math.min((MP.settings.team||4)*2,MAX_HUMANS);}
@@ -2435,7 +2435,7 @@ const LOCALTEST=location.hash==='#localtest';
 const inFrame=(()=>{try{return window.top!==window;}catch(e){return true;}})();
 
 /* ---- transport: PeerJS, or a BroadcastChannel bus for local testing ---- */
-class LocalConn{constructor(bus,me,peer){this.bus=bus;this.me=me;this.peer=peer;this.h={};this.open=true;}on(e,f){this.h[e]=f;return this;}send(d){if(!this.bus.dead)this.bus.post({to:this.peer,from:this.me,data:d});}close(){if(!this.bus.dead)this.bus.post({to:this.peer,from:this.me,bye:1});this.open=false;}_e(e,a){if(this.h[e])this.h[e](a);}}
+class LocalConn{constructor(bus,me,peer){this.bus=bus;this.me=me;this.peer=peer;this.h={};this.open=true;}on(e,f){this.h[e]=f;return this;}send(d){if(JSON.stringify(d).length>16300){console.warn('LocalConn: message too big for a real connection');return;}if(!this.bus.dead)this.bus.post({to:this.peer,from:this.me,data:d});}close(){if(!this.bus.dead)this.bus.post({to:this.peer,from:this.me,bye:1});this.open=false;}_e(e,a){if(this.h[e])this.h[e](a);}}
 class LocalPeer{
  constructor(id){this.id=id||('p'+Math.random().toString(36).slice(2,8));this.h={};this.conns={};this.bc=new BroadcastChannel('sf-local-bus');this.nonce=Math.random();this.taken=false;
   this.bc.onmessage=ev=>{const m=ev.data;
@@ -2450,9 +2450,33 @@ class LocalPeer{
  connect(id){const c=new LocalConn(this,this.id,id);this.conns[id]=c;this.post({to:id,from:this.id,hello:1});return c;}
  destroy(){if(this.dead)return;this.dead=true;for(const k in this.conns)this.conns[k].close();try{this.bc.close();}catch(e){}}
 }
-function makePeer(id){if(LOCALTEST)return new LocalPeer(id);if(!window.Peer)throw new Error('no peerjs');return id?new Peer(id,{debug:0}):new Peer({debug:0});}
-function mpSend(msg){if(!MP||MP.offline)return;if(MP.host){for(const c of MP.conns.values())if(c.open!==false)try{c.send(msg);}catch(e){}}else if(MP.hostConn)try{MP.hostConn.send(msg);}catch(e){}}
-function mpSendTo(id,msg){if(!MP||!MP.host)return;const c=MP.conns.get(id);if(c)try{c.send(msg);}catch(e){}}
+/* ---- connection relay (TURN). PeerJS's own free relays are offline, so devices that can't reach each other directly
+   (different houses, mobile data, strict Wi-Fi) need a relay key, e.g. a free Open Relay key from metered.ca ---- */
+const SF_TURN_KEY='';   // optional: bake a key in here so every player gets it
+const STUN=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
+let ICE=null,ICE_AT=0,ICE_ERR=null;
+function turnSource(){const k=((S&&S.turnKey)||SF_TURN_KEY||'').trim();if(!k)return null;return /^https?:/i.test(k)?k:'https://openrelayproject.metered.ca/api/v1/turn/credentials?apiKey='+encodeURIComponent(k);}
+async function ensureIce(force){const src=turnSource();if(!src){ICE=null;ICE_ERR=null;return null;}if(ICE&&!force&&Date.now()-ICE_AT<3600e3)return ICE;
+ try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),4000);const r=await fetch(src,{signal:ctl.signal});clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();const list=Array.isArray(j)?j:(j.iceServers||[]);if(!list.length)throw new Error('no servers');ICE=list;ICE_AT=Date.now();ICE_ERR=null;return ICE;}
+ catch(e){ICE_ERR=String(e&&e.message||e);ICE=null;return null;}}
+function makePeer(id){if(LOCALTEST)return new LocalPeer(id);if(!window.Peer)throw new Error('no peerjs');const opts={debug:0,config:{iceServers:STUN.concat(ICE||[])}};return id?new Peer(id,opts):new Peer(opts);}
+async function netCheck(){const out=$('mpNet');if(!out)return;out.innerHTML='Checking your connection…';
+ const probe=(ice,pol)=>new Promise(res=>{let pc;try{pc=new RTCPeerConnection({iceServers:ice,iceTransportPolicy:pol||'all'});}catch(e){res(new Set());return;}const ty=new Set();pc.createDataChannel('x');pc.onicecandidate=e=>{if(e.candidate)ty.add(e.candidate.type);};pc.createOffer().then(o=>pc.setLocalDescription(o)).catch(()=>{});setTimeout(()=>{try{pc.close();}catch(e){}res(ty);},5000);});
+ const d=await probe(STUN);await ensureIce(true);const rl=ICE?await probe(ICE,'relay'):null;
+ const ok='✅',no='❌';let h=`<b>${d.has('srflx')?ok:no} Same Wi-Fi / direct play</b>: ${d.has('srflx')?'works.':'not available on this network.'}<br>`;
+ h+=rl?`<b>${rl.has('relay')?ok:no} Relay (play across different networks or mobile data)</b>: ${rl.has('relay')?'working.':'the relay key did not work: check it in Settings.'}`:`<b>⚠️ Relay</b>: not set up${ICE_ERR?' ('+ICE_ERR.replace(/</g,'')+')':''}. Devices on different networks or mobile data may not be able to connect. Add a free relay key in Settings → Online relay.`;
+ out.innerHTML=h;}
+// PeerJS refuses single JSON messages over ~16 KB, so big messages (e.g. the 100 v 100 start list) go in pieces
+let CHUNK_N=0;const CHUNK_MAX=12000;
+function csend(c,msg){if(!c)return;let str;try{str=JSON.stringify(msg);}catch(e){return;}
+ if(str.length<=CHUNK_MAX){try{c.send(msg);}catch(e){}return;}
+ const id=(++CHUNK_N)+'_'+Math.floor(Math.random()*1e6),n=Math.ceil(str.length/CHUNK_MAX);for(let i=0;i<n;i++)try{c.send({t:'chunk',id,i,n,d:str.slice(i*CHUNK_MAX,(i+1)*CHUNK_MAX)});}catch(e){}}
+const CHUNKS=new Map();
+function unchunk(m){let b=CHUNKS.get(m.id);if(!b){b={n:m.n,parts:[],got:0,at:Date.now()};CHUNKS.set(m.id,b);}if(b.parts[m.i]===undefined){b.parts[m.i]=m.d;b.got++;}
+ if(CHUNKS.size>50)for(const [k,v] of CHUNKS)if(Date.now()-v.at>30000)CHUNKS.delete(k);
+ if(b.got<b.n)return null;CHUNKS.delete(m.id);try{return JSON.parse(b.parts.join(''));}catch(e){return null;}}
+function mpSend(msg){if(!MP||MP.offline)return;if(MP.host){for(const c of MP.conns.values())if(c.open!==false)csend(c,msg);}else if(MP.hostConn)csend(MP.hostConn,msg);}
+function mpSendTo(id,msg){if(!MP||!MP.host)return;const c=MP.conns.get(id);if(c)csend(c,msg);}
 function mpClose(){if(!MP)return;mpUnpublish();try{if(MP.peer)MP.peer.destroy();}catch(e){}MP=null;}
 /* ---- public room noticeboard: public hosts claim one of PUBSLOTS well-known ids; the browser asks each one for its room info ---- */
 const PUBSLOTS=20;
@@ -2500,7 +2524,8 @@ function mpMenuHTML(){
   <p style="font-size:13px;margin:4px 0">Private: only people you give the code to can join. Public: shows up in everyone's game list.</p>
   <div class="row" style="margin-top:6px"><input id="mpCode" maxlength="5" placeholder="CODE" style="width:110px;padding:9px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:18px;text-transform:uppercase;letter-spacing:3px"><button class="btn sec" data-a="mpJoin">Join</button></div>
   <p id="mpErr" style="color:#ff7b72;min-height:20px">${MP&&MP.err?MP.err:''}</p>
-  <p style="font-size:13px">Online play needs an internet connection and the GitHub Pages copy of the game (the claude.ai page blocks connections between devices).</p></div>
+  <p style="font-size:13px">Online play needs an internet connection and the GitHub Pages copy of the game (the claude.ai page blocks connections between devices).</p>
+  <div class="row" style="margin-top:6px"><button class="btn sec sm" data-a="netCheck">📶 Connection check</button></div><div id="mpNet" style="font-size:13px;line-height:1.5;margin-top:6px"></div></div>
  <div class="card"><div class="mt"><b>🌐 Public games</b></div><p>Join any open room, or type a code on the left for a private one. Lots of rooms can run at once.</p><div id="mpRooms">${mpRoomsHTML()}</div><div class="row"><button class="btn sec" data-a="mpScan">↻ Refresh</button></div></div>
  <div class="card"><div class="mt"><b>🤖 Practice vs Bots</b></div><p>All four team modes against AI soldiers. Works offline and on any page, so it's good for learning the maps.</p><div class="row"><button class="btn" data-a="mpPractice">Practice</button></div>
   <p style="font-size:13px">Modes: ⚔️ Team Deathmatch · 🚩 Capture the Flag · 💣 Bomb Defuse · 👑 King of the Hill</p></div></div>`;
@@ -2509,6 +2534,7 @@ function mpName(){const el=$('mpName');if(el&&el.value.trim()){S.mpName=el.value
 function myLoadout(){return{primary:S.primary,secondary:S.secondary||'pistol',armor:ARMOR[S.armor].ap};}
 function mpNewState(host,offline){return{host,offline,conns:new Map(),lobby:[],settings:{mode:'tdm',theme:'industrial',bots:true,skill:'normal',limit:12,size:120,team:4},myId:host?'h':null,ents:new Map(),score:{red:0,blue:0},inMatch:false};}
 function mpHostStart(offline,pub){
+ if(!offline&&!LOCALTEST&&turnSource()&&!ICE&&!mpHostStart.waiting){mpHostStart.waiting=true;ensureIce().finally(()=>{mpHostStart.waiting=false;mpHostStart(offline,pub);});return;}
  mpClose();initAudio();const name=mpName();MP=mpNewState(true,offline);MP.settings.pub=!!pub&&!offline;MP.settings.room=name+"'s room";
  MP.lobby=[{id:'h',name,team:'red',lo:myLoadout()}];
  if(offline){MP.code='OFFLINE';renderLobby();return;}
@@ -2525,21 +2551,23 @@ function mpHostStart(offline,pub){
  });
 }
 function mpJoin(codeArg){
+ if(!LOCALTEST&&turnSource()&&!ICE&&!mpJoin.waiting){mpJoin.waiting=true;const cv=(codeArg||($('mpCode')&&$('mpCode').value)||'');ensureIce().finally(()=>{mpJoin.waiting=false;mpJoin(cv);});return;}
  const code=(codeArg||($('mpCode')&&$('mpCode').value)||'').trim().toUpperCase();if(code.length<4){$('mpErr').textContent='Type the 5-letter code from the host.';return;}if(SCAN&&SCAN.peer){try{SCAN.peer.destroy();}catch(e){}SCAN.peer=null;SCAN.busy=false;}
  mpClose();initAudio();const name=mpName();MP=mpNewState(false,false);MP.code=code;
  let peer;try{peer=makePeer();}catch(e){mpFail('Online play is not available here. Play from the GitHub Pages copy.');return;}
  MP.peer=peer;renderLobby('Joining '+code+'…');
- const to=setTimeout(()=>{if(MP&&!MP.joined)mpFail('No game found with code '+code+'.');},12000);
- peer.on('open',id=>{MP.myId=id;const c=peer.connect('sfm-'+code,{reliable:true,serialization:'json'});MP.hostConn=c;
+ let sigOk=false,unavail=false;const to=setTimeout(()=>{if(MP&&!MP.joined){if(!sigOk)mpFail('Could not reach the online game service. Check the internet connection and try again.');else if(unavail)mpFail('No game found with code '+code+'. Check the code with the host.');else mpFail('Found game '+code+' but could not connect to the host\'s device. This usually happens when the two devices are on different networks or mobile data. Put both devices on the same Wi-Fi, or add a relay key in Settings → Online relay. Tap Connection check to test.');}},20000);
+ peer.on('open',id=>{sigOk=true;MP.myId=id;const c=peer.connect('sfm-'+code,{reliable:true,serialization:'json'});MP.hostConn=c;
   c.on('open',()=>{clearTimeout(to);MP.joined=true;c.send({t:'hello',name,lo:myLoadout(),ver:SF_VER});});
   c.on('data',d=>clientMsg(d));
   c.on('close',()=>{if(MP){const was=MP.inMatch;mpClose();if(was||state==='lobby'){tab='mp';renderBase();setTimeout(()=>{const e=$('mpErr');if(e)e.textContent='The host left the game.';},50);}}});
  });
- peer.on('error',e=>mpFail(e&&e.type==='peer-unavailable'?'No game found with code '+code+'.':'Could not connect ('+(e&&e.type||'blocked')+'). Play from the GitHub Pages copy.'));
+ peer.on('error',e=>{if(e&&e.type==='peer-unavailable'){unavail=true;clearTimeout(to);mpFail('No game found with code '+code+'. Check the code with the host, and make sure the host still has the game open on screen.');}else mpFail('Could not connect ('+(e&&e.type||'blocked')+'). '+(inFrame?'Play from the GitHub Pages copy.':'Check the internet connection and try again.'));});
 }
 function mpFail(msg){mpClose();tab='mp';renderBase();setTimeout(()=>{const e=$('mpErr');if(e)e.textContent=msg;},30);}
 function balanceTeam(){const r=MP.lobby.filter(p=>p.team==='red').length,b=MP.lobby.length-r;return r<=b?'red':'blue';}
 function hostMsg(id,m){
+ if(m&&m.t==='chunk'){const w=unchunk(m);if(w)hostMsg(id,w);return;}
  if(!MP)return;
  if(m.t==='hello'){if(MP.lobby.length>=mpMaxPlayers()){mpSendTo(id,{t:'full'});return;}
   if(m.ver!==SF_VER){mpSendTo(id,{t:'oldver',v:SF_VER});return;}
@@ -2562,6 +2590,7 @@ function hostLeave(id){if(!MP)return;MP.conns.delete(id);const p=MP.lobby.find(q
  if(!MP.inMatch)lobbySync();}
 function lobbySync(){if(!MP||!MP.host)return;mpSend({t:'lobby',lobby:MP.lobby,settings:MP.settings,code:MP.code});if(state==='lobby')renderLobby();}
 function clientMsg(m){
+ if(m&&m.t==='chunk'){const w=unchunk(m);if(w)clientMsg(w);return;}
  if(!MP)return;
  switch(m.t){
   case 'full':mpFail('That game is full.');break;
@@ -2636,12 +2665,13 @@ function mpFillBots(){
  for(const t of TEAMS){const have=[...MP.ents.values()].filter(e=>e.team===t).length;for(let i=have;i<(MP.settings.team||4);i++){const id='b'+(n++);const e=mpAddEnt(id,'Bot '+BOTNAMES[(n-1)%20],t,true,{primary:'rifle',armor:t==='red'?0:0});if(MP.inMatch&&MP.settings.mode!=='bomb')mpSpawn(e);else if(MP.inMatch&&MP.bomb&&MP.bomb.phase!=='live'&&MP.bomb.phase!=='planted')mpSpawn(e);}}
  mpRefreshLists();
 }
-function mpRoster(){if(!MP.host)return;const list=[...MP.ents.values()].map(e=>({id:e.id,name:e.name,team:e.team,bot:e.bot,lo:e.lo}));mpSend({t:'roster',list});mpRefreshLists();}
+function mpRoster(){if(!MP.host)return;const list=mpListOut();mpSend({t:'roster',list});mpRefreshLists();}
 function mpApplyRoster(list){const ids=new Set(list.map(l=>l.id));for(const id of [...MP.ents.keys()])if(!ids.has(id))mpRemoveEnt(id);
  for(const l of list){const e=mpAddEnt(l.id,l.name,l.team,l.bot,l.lo);if(e.mesh&&e.meshTeam!==l.team){mpMakeMesh(e);}e.meshTeam=l.team;}mpRefreshLists();}
 
 /* ---- match setup ---- */
-function mpStartMsg(){return{t:'start',seed:MP.seed,settings:MP.settings,list:[...MP.ents.values()].map(e=>({id:e.id,name:e.name,team:e.team,bot:e.bot,lo:e.lo}))};}
+function mpListOut(){return [...MP.ents.values()].map(e=>e.bot?{id:e.id,name:e.name,team:e.team,bot:true}:{id:e.id,name:e.name,team:e.team,bot:false,lo:e.lo});}
+function mpStartMsg(){return{t:'start',seed:MP.seed,settings:MP.settings,list:mpListOut()};}
 function hostGo(){
  if(!MP||!MP.host)return;MP.seed=(RNG()*1e9)|0;MP.ents=new Map();
  for(const p of MP.lobby)mpAddEnt(p.id,p.name,p.team,false,p.lo);
@@ -2752,7 +2782,7 @@ function mpUpdate(dt){
    if(e.bot&&e.alive&&!MP.over)botUpdate(e,dt);
   }
   if(!MP.over)mpModeHost(dt);
-  MP.snapT-=dt;if(MP.snapT<=0){const hn=MP.conns.size+1;MP.snapT=1/(hn<=8?15:hn<=16?12:10);MP.snapN=(MP.snapN||0)+1;if(MP.ents.size>40){for(const [id,c] of MP.conns){try{c.send(mpSnap(id));}catch(x){}}}else mpSend(mpSnap());}
+  MP.snapT-=dt;if(MP.snapT<=0){const hn=MP.conns.size+1;MP.snapT=1/(hn<=8?15:hn<=16?12:10);MP.snapN=(MP.snapN||0)+1;if(MP.ents.size>40){for(const [id,c] of MP.conns){csend(c,mpSnap(id));}}else mpSend(mpSnap());}
  }else{
   MP.sendT-=dt;if(MP.sendT<=0&&!P.dead){MP.sendT=0.05;mpSend({t:'st',p:[Math.round(P.pos.x*100)/100,Math.round(P.pos.z*100)/100,Math.round(P.yaw*1000)/1000,Math.round(P.pitch*1000)/1000,Math.round(P.y*100)/100,P.stance],w:P.weapons[P.wi]});}
  }
@@ -2775,7 +2805,7 @@ function mpUpdate(dt){
  mpLOD();
  mpModeVisuals(dt);
 }
-function mpSendNear(m,pos,r){if(!MP||!MP.host)return;for(const [id,c] of MP.conns){const pe=MP.ents.get(id);if(!pe||d2(pe.pos,pos)<r)try{c.send(m);}catch(x){}}}
+function mpSendNear(m,pos,r){if(!MP||!MP.host)return;for(const [id,c] of MP.conns){const pe=MP.ents.get(id);if(!pe||d2(pe.pos,pos)<r)csend(c,m);}}
 // far-away soldiers become simple instanced team figures (one draw call per team part)
 const IMP_GEO={},Y_AXIS=new THREE.Vector3(0,1,0);function mpLOD(){
  if(MP.ents.size<=30){if(MP.imp)for(const t of TEAMS){MP.imp[t].b.count=0;MP.imp[t].h.count=0;}return;}
@@ -3135,6 +3165,9 @@ function renderSettings(){
  <label class="set">Look sensitivity <input type="range" min="0.3" max="2.5" step="0.05" value="${S.sens}" data-in="sens"> <b id="sensV">${S.sens.toFixed(2)}</b></label>
  <label class="set">Difficulty ${Object.keys(DIFF).map(k=>`<button class="btn sm ${S.diff===k?'':'sec'}" data-a="diff" data-k="${k}">${DIFF[k].label}</button>`).join(' ')}</label>
  <label class="set">Controls ${[['auto','Auto'],['touch','Touch'],['kb','Keyboard + Mouse']].map(([k,n])=>`<button class="btn sm ${S.ctrl===k?'':'sec'}" data-a="ctrl" data-k="${k}">${n}</button>`).join(' ')}</label>
+ <label class="set" style="display:block">Online relay <small style="color:#8b949e">(lets devices on different networks or mobile data play together)</small><br>
+  <input id="turnKey" value="${(S.turnKey||'').replace(/"/g,'')}" placeholder="Paste your free Open Relay API key" style="width:min(420px,90%);padding:7px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:15px;margin:6px 0">
+  <button class="btn sm" data-a="turnSave">Save</button> <span id="turnMsg" style="font-size:13px;color:#8b949e">${SF_TURN_KEY?'A relay is built into this copy of the game.':S.turnKey?'Key saved.':'Not set: same-Wi-Fi play still works.'}</span></label>
  <label class="set">Touch buttons ${[['s','Small'],['m','Medium'],['l','Large']].map(([k,n])=>`<button class="btn sm ${(S.btnSize||'m')===k?'':'sec'}" data-a="btnSize" data-k="${k}">${n}</button>`).join('')}</label>
  <label class="set">Graphics ${[['auto','Auto'],['low','Low'],['medium','Medium'],['high','High']].map(([k,n])=>`<button class="btn sm ${(S.gfx||'auto')===k?'':'sec'}" data-a="gfx" data-k="${k}">${n}</button>`).join(' ')}</label>
  <p style="color:#9aa4ad;margin:10px 0">Lower graphics if the game feels slow on the iPad. Progress saves automatically in this browser.</p>
@@ -3230,6 +3263,8 @@ scr.addEventListener('click',e=>{
   case 'diff':S.diff=k;save();renderSettings();break;
   case 'ctrl':S.ctrl=k;save();renderSettings();break;
   case 'gfx':S.gfx=k;save();applyGfx();renderSettings();break;
+  case 'netCheck':netCheck();break;
+  case 'turnSave':{const v=($('turnKey').value||'').trim();S.turnKey=v;save();ICE=null;const m=$('turnMsg');if(m)m.textContent=v?'Checking key…':'Relay key removed.';if(v)ensureIce(true).then(r=>{const mm=$('turnMsg');if(mm)mm.textContent=r?'✅ Relay key works ('+r.length+' relay servers).':'❌ That key did not work'+(ICE_ERR?' ('+ICE_ERR+')':'')+'.';});break;}
   case 'btnSize':S.btnSize=k;save();applyBtnSize();renderSettings();break;
   case 'reset':if(resetArm){S=defSave();save();resetArm=false;tab='missions';renderBase();}else{resetArm=true;renderSettings();}break;
  }

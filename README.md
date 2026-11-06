@@ -82,7 +82,17 @@ There are 44 missions.
 
 **Team Deathmatch** is won by the first team to reach 3 × the team size in knockouts (24 for 8 v 8, 150 for 50 v 50, 300 for 100 v 100).
 
-**If a public game doesn't show up:**
+**If you can't join a game:**
+- Tap **📶 Connection check** on the Multiplayer screen. It tests both kinds of connection on that device.
+- Devices on the **same Wi-Fi** connect directly, and that works out of the box.
+- Devices on **different networks** (a friend's house, a phone on mobile data, school or office Wi-Fi) need a **relay**. The free relays built into PeerJS are offline, so add your own (free):
+  1. Sign up for a free account at metered.ca and open the **Open Relay** (free TURN, 20 GB a month) section of the dashboard.
+  2. Copy your **API key**.
+  3. In the game, open **Settings → Online relay**, paste the key and press **Save**. It should say ✅ Relay key works.
+  4. Only one of the two devices needs the key, but putting it on the host's device covers everyone who joins.
+- The error message now tells you what went wrong: no game with that code, the game was found but the device couldn't connect, or no internet.
+
+
 - Everyone needs the same game version. It's shown next to the SPECIAL FORCE title (for example v13). After you update GitHub, reload the page on every device (on iPad, pull down to refresh). Rooms from a different version show an "Update" button instead of "Join".
 - The host should keep the game on screen. If an iPad goes to sleep or switches apps, the room drops off the list until the game is opened again.
 - Online play only works from the GitHub Pages copy, not the claude.ai preview.
