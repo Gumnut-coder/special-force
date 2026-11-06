@@ -34,7 +34,8 @@ To update the game later, upload the new `index.html` over the old one.
 
 **iPad / touch**
 - Left side: drag to move. Right side: drag to look.
-- Buttons for FIRE, AIM, reload, swap weapon, grenade (💣), smoke bomb (💨), medkit and USE.
+- Buttons sit in the corners and size themselves to your screen: FIRE, AIM, reload (R), jump (⤒) and stance (🧎) bottom-right; grenade (💣), smoke (💨), medkit (✚), swap (⇄) and squad (👥) in a slim strip (a column on the right when the device is upright, a row along the bottom when it's sideways). USE appears above the joystick only when there's something to use.
+- Settings → Touch buttons: Small, Medium or Large.
 - ⤒ jumps. 🧎 crouches, press again to lie down, and again to stand.
 - Push forward into a ladder to climb onto a roof.
 - Hold USE at a mounted gun to hop on, and tap USE to get off.
